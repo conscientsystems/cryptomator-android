@@ -102,12 +102,13 @@ class OfflineFilesRepositoryImpl @Inject constructor(
 
 	override fun usage(): OfflineUsage {
 		val usage = offlineFiles.store.usage()
-		return OfflineUsage(usage.offlineFiles, usage.other)
+		return OfflineUsage(usage.offlineFiles, usage.other + offlineFiles.thumbnails.usage())
 	}
 
 	override fun clear() {
 		offlineFiles.pins.clear()
 		offlineFiles.store.clear()
+		offlineFiles.thumbnails.clear()
 	}
 
 	private fun collectGarbage() {

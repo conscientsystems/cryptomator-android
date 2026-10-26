@@ -6,6 +6,7 @@ import org.cryptomator.domain.repository.CloudRepository;
 import org.cryptomator.domain.repository.HubRepository;
 import org.cryptomator.domain.repository.OfflineFilesRepository;
 import org.cryptomator.domain.repository.SharepointRepository;
+import org.cryptomator.domain.repository.ThumbnailRepository;
 import org.cryptomator.domain.repository.UpdateCheckRepository;
 import org.cryptomator.domain.repository.VaultRepository;
 
@@ -39,6 +40,12 @@ public class RepositoryModule {
 	@Provides
 	public OfflineFilesRepository provideOfflineFilesRepository(OfflineFilesRepositoryImpl offlineFilesRepository) {
 		return offlineFilesRepository;
+	}
+
+	@Singleton
+	@Provides
+	public ThumbnailRepository provideThumbnailRepository(ThumbnailRepositoryImpl thumbnailRepository) {
+		return thumbnailRepository;
 	}
 
 	@Singleton

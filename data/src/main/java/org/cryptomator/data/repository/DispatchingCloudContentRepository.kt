@@ -254,6 +254,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	fun removeOfflineFilesOf(vaultId: Long?) {
 		vaultId ?: return
 		offlineFiles.pins.removeVault(vaultId)
+		offlineFiles.thumbnails.removeVault(vaultId)
 		offlineFiles.store.collectGarbage { cloudId, path -> offlineFiles.pins.isWanted(cloudId, path) }
 	}
 

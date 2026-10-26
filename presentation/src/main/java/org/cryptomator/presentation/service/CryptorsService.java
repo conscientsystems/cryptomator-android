@@ -12,6 +12,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.cryptomator.data.cloud.crypto.Cryptors;
 import org.cryptomator.presentation.util.FileUtil;
+import org.cryptomator.presentation.util.ThumbnailLoader;
 import org.cryptomator.util.LockTimeout;
 import org.cryptomator.util.SharedPreferencesHandler;
 
@@ -126,6 +127,7 @@ public class CryptorsService extends Service {
 	}
 
 	private void onUnlockCountChanged(int unlocked) {
+		ThumbnailLoader.clearMemory();
 		if (unlocked == 0) {
 			if (fileUtil != null) {
 				fileUtil.cleanupDecryptedFiles();
