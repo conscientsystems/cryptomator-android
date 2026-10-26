@@ -149,6 +149,19 @@
 
 	</PreferenceCategory>
 
+	<PreferenceCategory android:title="@string/screen_settings_offline_files">
+
+		<androidx.preference.PreferenceScreen
+			android:key="offlineFilesUsage"
+			android:title="@string/screen_settings_offline_files_usage" />
+
+		<androidx.preference.PreferenceScreen
+			android:key="offlineFilesClear"
+			android:summary="@string/screen_settings_offline_files_clear_summary"
+			android:title="@string/screen_settings_offline_files_clear" />
+
+	</PreferenceCategory>
+
 	<PreferenceCategory android:title="@string/screen_settings_section_support">
 
 		<androidx.preference.PreferenceScreen android:title="@string/screen_settings_contact_label">

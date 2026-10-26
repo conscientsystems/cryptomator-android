@@ -785,4 +785,16 @@
 	<string name="update_interval_1d">Once a day</string>
 	<string name="update_interval_never" translatable="false">@string/lock_timeout_never</string>
 
+	<string name="screen_file_browser_available_offline">Available offline</string>
+	<string name="screen_file_browser_node_action_make_available_offline">Make available offline</string>
+	<string name="screen_file_browser_node_action_remove_from_offline">Remove from offline</string>
+	<string name="screen_file_browser_node_available_offline_through_parent">Available offline through a parent folder</string>
+	<string name="screen_file_browser_offline_sync_finished">Offline files updated: %1$d files, %2$d downloaded</string>
+	<string name="screen_file_browser_offline_sync_failed">%1$d offline files could not be downloaded</string>
+	<string name="screen_settings_offline_files">Offline files</string>
+	<string name="screen_settings_offline_files_usage">Storage used</string>
+	<string name="screen_settings_offline_files_usage_summary">%1$s offline files, %2$s folder structure</string>
+	<string name="screen_settings_offline_files_clear">Remove all offline files</string>
+	<string name="screen_settings_offline_files_clear_summary">Files and folders stay in your vaults, only the copies on this device are removed</string>
+	<string name="screen_settings_offline_files_cleared">All offline files removed</string>
 </resources>

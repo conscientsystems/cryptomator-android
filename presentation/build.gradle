@@ -18,6 +18,15 @@ android {
 			storeFile file('debug.keystore')
 			storePassword 'android'
 		}
+		// optional release signing for self-built APKs, e.g. FORK_KEYSTORE=/path/release.jks FORK_KEYSTORE_PASSWORD=... ./gradlew assembleLiteRelease
+		if (System.getenv("FORK_KEYSTORE")) {
+			fork {
+				storeFile file(System.getenv("FORK_KEYSTORE"))
+				storePassword System.getenv("FORK_KEYSTORE_PASSWORD")
+				keyAlias System.getenv("FORK_KEY_ALIAS") ?: "offline"
+				keyPassword System.getenv("FORK_KEYSTORE_PASSWORD")
+			}
+		}
 	}
 
 	def globalConfiguration = rootProject.extensions.getByName("ext")
@@ -56,6 +65,9 @@ android {
 
 	buildTypes {
 		release {
+			if (System.getenv("FORK_KEYSTORE")) {
+				signingConfig signingConfigs.fork
+			}
 			crunchPngs false
 			minifyEnabled false
 			shrinkResources false
@@ -112,7 +124,9 @@ android {
 		lite {
 			dimension "version"
 
-			applicationIdSuffix ".lite"
+			// FORK_APP_ID_SUFFIX lets a self-built APK be installed next to the published one
+			applicationIdSuffix ".lite" + (System.getenv("FORK_APP_ID_SUFFIX") ?: "")
+			versionNameSuffix System.getenv("FORK_VERSION_SUFFIX") ?: ""
 			resValue "string", "app_id", androidApplicationId + applicationIdSuffix
 		}
 

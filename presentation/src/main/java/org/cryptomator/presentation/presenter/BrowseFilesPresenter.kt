@@ -88,6 +88,13 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.Serializable
 import java.util.function.Supplier
+import org.cryptomator.domain.repository.OfflineFilesRepository
+import org.cryptomator.domain.repository.OfflineSyncResult
+import org.cryptomator.domain.usecases.cloud.MakeAvailableOfflineUseCase
+import org.cryptomator.domain.usecases.cloud.RemoveFromOfflineUseCase
+import org.cryptomator.domain.usecases.cloud.SyncOfflineFilesUseCase
+import org.cryptomator.presentation.ui.bottomsheet.OfflineState
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.reflect.KClass
 import timber.log.Timber
@@ -127,6 +134,10 @@ class BrowseFilesPresenter @Inject constructor( //
 	private val downloadFileUtil: DownloadFileUtil,  //
 	private val sharedPreferencesHandler: SharedPreferencesHandler,  //
 	private val licenseEnforcer: LicenseEnforcer, //
+	private val offlineFilesRepository: OfflineFilesRepository, //
+	private val makeAvailableOfflineUseCase: MakeAvailableOfflineUseCase, //
+	private val removeFromOfflineUseCase: RemoveFromOfflineUseCase, //
+	private val syncOfflineFilesUseCase: SyncOfflineFilesUseCase, //
 	exceptionMappings: ExceptionHandlers
 ) : Presenter<BrowseFilesView>(exceptionMappings) {
 
@@ -136,6 +147,8 @@ class BrowseFilesPresenter @Inject constructor( //
 	private lateinit var downloadFiles: MutableList<DownloadFile>
 
 	private var resumedAfterAuthentication = false
+	private var offlineSyncRunning = false
+	private var pendingOfflineSync: Cloud? = null
 
 	@InjectIntent
 	lateinit var intent: BrowseFilesIntent
@@ -205,6 +218,7 @@ class BrowseFilesPresenter @Inject constructor( //
 						showCloudNodesCollectionInView(cloudNodes)
 					}
 					view?.showLoading(false)
+					syncOfflineFilesOnce(cloudFolderModel.toCloudNode().cloud)
 				}
 
 				override fun onError(e: Throwable) {
@@ -493,6 +507,90 @@ class BrowseFilesPresenter @Inject constructor( //
 
 	fun onDeleteCloudNodes(nodes: List<CloudNodeModel<*>>) {
 		deleteCloudNode(nodes)
+	}
+
+	fun offlineStateOf(node: CloudNodeModel<*>): OfflineState {
+		val cloudNode = node.toCloudNode()
+		return when {
+			offlineFilesRepository.isMadeAvailableOffline(cloudNode) -> OfflineState.MADE_AVAILABLE
+			offlineFilesRepository.isAvailableOffline(cloudNode) -> OfflineState.AVAILABLE_THROUGH_PARENT
+			else -> OfflineState.NOT_AVAILABLE
+		}
+	}
+
+	fun onMakeAvailableOfflineClicked(node: CloudNodeModel<*>) {
+		makeAvailableOfflineUseCase //
+			.withNodes(listOf(node.toCloudNode())) //
+			.run(object : DefaultResultHandler<List<CloudNode>>() {
+				override fun onSuccess(nodes: List<CloudNode>) {
+					view?.addOrUpdateCloudNode(node)
+					syncOfflineFiles(node.toCloudNode().cloud, true)
+				}
+			})
+	}
+
+	fun onRemoveFromOfflineClicked(node: CloudNodeModel<*>) {
+		removeFromOfflineUseCase //
+			.withNodes(listOf(node.toCloudNode())) //
+			.run(object : DefaultResultHandler<List<CloudNode>>() {
+				override fun onSuccess(nodes: List<CloudNode>) {
+					view?.addOrUpdateCloudNode(node)
+				}
+			})
+	}
+
+	/**
+	 * Brings what was made available offline in the vault up to date, once per vault while the app runs, when the vault
+	 * is browsed. Without a network connection it fails quietly and is tried again on the next listing.
+	 */
+	private fun syncOfflineFilesOnce(cloud: Cloud?) {
+		val vaultId = view?.folder?.vault()?.vaultId ?: return
+		if (cloud != null && vaultId !in offlineSyncedVaults && !offlineSyncRunning) {
+			syncOfflineFiles(cloud, false) { offlineSyncedVaults.add(vaultId) }
+		}
+	}
+
+	/**
+	 * Runs one sync at a time; a sync asked for while one runs follows it, so that a file or folder just made available
+	 * offline isn't missed by a sync that started before.
+	 */
+	private fun syncOfflineFiles(cloud: Cloud?, report: Boolean, onSynced: () -> Unit = {}) {
+		if (cloud == null) {
+			return
+		}
+		if (offlineSyncRunning) {
+			pendingOfflineSync = cloud
+			return
+		}
+		offlineSyncRunning = true
+		syncOfflineFilesUseCase //
+			.withCloud(cloud) //
+			.run(object : DefaultResultHandler<OfflineSyncResult>() {
+				override fun onSuccess(result: OfflineSyncResult) {
+					onSynced()
+					if (report || result.downloaded > 0) {
+						view?.showMessage(context().getString(R.string.screen_file_browser_offline_sync_finished, result.files, result.downloaded))
+					}
+					if (result.failed > 0) {
+						view?.showMessage(context().getString(R.string.screen_file_browser_offline_sync_failed, result.failed))
+					}
+				}
+
+				override fun onError(e: Throwable) {
+					Timber.tag("BrowseFilesPresenter").w(e, "Failed to update the offline files")
+					if (report) {
+						super.onError(e)
+					}
+				}
+
+				override fun onFinished() {
+					offlineSyncRunning = false
+					pendingOfflineSync?.let {
+						pendingOfflineSync = null
+						syncOfflineFiles(it, true)
+					}
+				}
+			})
 	}
 
 	private fun deleteCloudNode(nodes: List<CloudNodeModel<*>>) {
@@ -1278,6 +1376,11 @@ class BrowseFilesPresenter @Inject constructor( //
 				presenter.copyFile(downloadFiles)
 			}
 		}
+		/**
+		 * The vaults whose offline files were brought up to date since the app started.
+		 */
+		private val offlineSyncedVaults: MutableSet<Long> = ConcurrentHashMap.newKeySet()
+
 		val EXPORT_TRIGGERED_BY_USER: ExportOperation = object : ExportOperation {
 			override fun export(presenter: BrowseFilesPresenter, downloadFiles: List<DownloadFile>) {
 				presenter.exportFile(downloadFiles)
@@ -1299,7 +1402,10 @@ class BrowseFilesPresenter @Inject constructor( //
 			moveFoldersUseCase, //
 			getDecryptedCloudForVaultUseCase, //
 			calculateFileHashUseCase, //
-			prepareDownloadFilesUseCase
+			prepareDownloadFilesUseCase, //
+			makeAvailableOfflineUseCase, //
+			removeFromOfflineUseCase, //
+			syncOfflineFilesUseCase
 		)
 		this.authenticationExceptionHandler = authenticationExceptionHandler
 	}

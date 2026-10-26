@@ -12,6 +12,18 @@
 		android:layout_centerVertical="true"
 		android:layout_marginStart="16dp" />
 
+	<ImageView
+		android:id="@+id/offline_badge"
+		android:layout_width="16dp"
+		android:layout_height="16dp"
+		android:layout_alignEnd="@id/cloud_node_image"
+		android:layout_alignBottom="@id/cloud_node_image"
+		android:layout_marginEnd="-4dp"
+		android:layout_marginBottom="-4dp"
+		android:contentDescription="@string/screen_file_browser_available_offline"
+		android:src="@drawable/ic_offline_badge"
+		android:visibility="gone" />
+
 	<include
 		android:id="@+id/ll_cloud_folder_content"
 		layout="@layout/view_cloud_folder_content"

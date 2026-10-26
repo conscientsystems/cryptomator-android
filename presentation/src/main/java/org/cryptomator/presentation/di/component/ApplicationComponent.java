@@ -12,6 +12,7 @@ import org.cryptomator.domain.repository.BoxRepository;
 import org.cryptomator.domain.repository.CloudContentRepository;
 import org.cryptomator.domain.repository.CloudRepository;
 import org.cryptomator.domain.repository.HubRepository;
+import org.cryptomator.domain.repository.OfflineFilesRepository;
 import org.cryptomator.domain.repository.SharepointRepository;
 import org.cryptomator.domain.repository.UpdateCheckRepository;
 import org.cryptomator.domain.repository.VaultRepository;
@@ -48,6 +49,8 @@ public interface ApplicationComponent {
 	BoxRepository boxRepository();
 
 	UpdateCheckRepository updateCheckRepository();
+
+	OfflineFilesRepository offlineFilesRepository();
 
 	FileUtil fileUtil();
 

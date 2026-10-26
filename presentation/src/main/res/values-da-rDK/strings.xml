@@ -500,4 +500,16 @@
 	<string name="dark">Mørk</string>
 	<!-- update interval names -->
 	<string name="update_interval_1d">Dagligt</string>
+	<string name="screen_file_browser_available_offline">Tilgængelig offline</string>
+	<string name="screen_file_browser_node_action_make_available_offline">Gør tilgængelig offline</string>
+	<string name="screen_file_browser_node_action_remove_from_offline">Fjern fra offline</string>
+	<string name="screen_file_browser_node_available_offline_through_parent">Tilgængelig offline via en overmappe</string>
+	<string name="screen_file_browser_offline_sync_finished">Offline-filer opdateret: %1$d filer, %2$d hentet</string>
+	<string name="screen_file_browser_offline_sync_failed">%1$d offline-filer kunne ikke hentes</string>
+	<string name="screen_settings_offline_files">Offline-filer</string>
+	<string name="screen_settings_offline_files_usage">Pladsforbrug</string>
+	<string name="screen_settings_offline_files_usage_summary">%1$s offline-filer, %2$s mappestruktur</string>
+	<string name="screen_settings_offline_files_clear">Fjern alle offline-filer</string>
+	<string name="screen_settings_offline_files_clear_summary">Filer og mapper bliver i dine bokse, kun kopierne på denne enhed fjernes</string>
+	<string name="screen_settings_offline_files_cleared">Alle offline-filer er fjernet</string>
 </resources>

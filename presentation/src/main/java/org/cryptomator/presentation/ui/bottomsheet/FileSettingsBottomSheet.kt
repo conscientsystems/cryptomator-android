@@ -19,6 +19,8 @@ class FileSettingsBottomSheet : BaseBottomSheet<FileSettingsBottomSheet.Callback
 		fun onShareFileClicked(cloudFile: CloudFileModel)
 		fun onMoveFileClicked(cloudFile: CloudFileModel)
 		fun onOpenWithTextFileClicked(cloudFile: CloudFileModel)
+		fun onMakeAvailableOfflineClicked(node: CloudNodeModel<*>)
+		fun onRemoveFromOfflineClicked(node: CloudNodeModel<*>)
 	}
 
 	override fun setupView() {
@@ -36,6 +38,11 @@ class FileSettingsBottomSheet : BaseBottomSheet<FileSettingsBottomSheet.Callback
 				callback?.onOpenWithTextFileClicked(cloudFileModel)
 				dismiss()
 			}
+		}
+
+		bindOfflineToggle(binding.offlineToggle, cloudFileModel, OfflineState.entries[requireArguments().getInt(OFFLINE_STATE_ARG)]) { node, makeAvailable ->
+			if (makeAvailable) callback?.onMakeAvailableOfflineClicked(node) else callback?.onRemoveFromOfflineClicked(node)
+			dismiss()
 		}
 
 		binding.shareFile.setOnClickListener {
@@ -64,9 +71,10 @@ class FileSettingsBottomSheet : BaseBottomSheet<FileSettingsBottomSheet.Callback
 
 		private const val FILE_ARG = "file"
 		private const val PARENT_FOLDER_PATH_ARG = "parentFolderPath"
-		fun newInstance(cloudFileModel: CloudFileModel, parentFolderPath: String): FileSettingsBottomSheet {
+		fun newInstance(cloudFileModel: CloudFileModel, parentFolderPath: String, offlineState: OfflineState): FileSettingsBottomSheet {
 			val dialog = FileSettingsBottomSheet()
 			val args = Bundle()
+			args.putInt(OFFLINE_STATE_ARG, offlineState.ordinal)
 			args.putSerializable(FILE_ARG, cloudFileModel)
 			args.putString(PARENT_FOLDER_PATH_ARG, parentFolderPath)
 			dialog.arguments = args

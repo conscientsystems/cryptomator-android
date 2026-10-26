@@ -3,6 +3,8 @@ package org.cryptomator.data.repository
 import org.cryptomator.data.cloud.CloudContentRepositoryFactories
 import org.cryptomator.data.cloud.crypto.CryptoCloud
 import org.cryptomator.data.cloud.crypto.CryptoCloudContentRepositoryFactory
+import org.cryptomator.data.offline.OfflineCapableCloudContentRepository
+import org.cryptomator.data.offline.OfflineFiles
 import org.cryptomator.data.util.NetworkConnectionCheck
 import org.cryptomator.domain.Cloud
 import org.cryptomator.domain.CloudFile
@@ -25,7 +27,8 @@ import javax.inject.Singleton
 class DispatchingCloudContentRepository @Inject constructor(
 	private val cloudContentRepositoryFactories: CloudContentRepositoryFactories,
 	private val networkConnectionCheck: NetworkConnectionCheck,
-	private val cryptoCloudContentRepositoryFactory: CryptoCloudContentRepositoryFactory
+	private val cryptoCloudContentRepositoryFactory: CryptoCloudContentRepositoryFactory,
+	private val offlineFiles: OfflineFiles
 ) : CloudContentRepository<Cloud, CloudNode, CloudFolder, CloudFile> {
 
 	private val delegates: MutableMap<Cloud, CloudContentRepository<Cloud, CloudNode, CloudFolder, CloudFile>> = WeakHashMap()
@@ -33,7 +36,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun root(cloud: Cloud): CloudFolder {
 		return try {
-			networkConnectionCheck.assertConnectionIsPresent(cloud)
+			assertConnectionUnlessOfflineCapable(cloud)
 			delegateFor(cloud).root(cloud)
 		} catch (e: AuthenticationException) {
 			delegates.remove(cloud)
@@ -55,7 +58,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun file(parent: CloudFolder, name: String): CloudFile {
 		return try {
-			parent.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			parent.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(parent).file(parent, name)
 		} catch (e: AuthenticationException) {
 			delegates.remove(parent.cloud)
@@ -66,7 +69,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun file(parent: CloudFolder, name: String, size: Long?): CloudFile {
 		return try {
-			parent.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			parent.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(parent).file(parent, name, size)
 		} catch (e: AuthenticationException) {
 			delegates.remove(parent.cloud)
@@ -77,7 +80,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun folder(parent: CloudFolder, name: String): CloudFolder {
 		return try {
-			parent.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			parent.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(parent).folder(parent, name)
 		} catch (e: AuthenticationException) {
 			delegates.remove(parent.cloud)
@@ -88,7 +91,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun exists(node: CloudNode): Boolean {
 		return try {
-			node.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			node.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(node).exists(node)
 		} catch (e: AuthenticationException) {
 			delegates.remove(node.cloud)
@@ -99,7 +102,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun list(folder: CloudFolder): List<CloudNode> {
 		return try {
-			folder.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			folder.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(folder).list(folder)
 		} catch (e: AuthenticationException) {
 			delegates.remove(folder.cloud)
@@ -110,7 +113,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun create(folder: CloudFolder): CloudFolder {
 		return try {
-			folder.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			folder.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(folder).create(folder)
 		} catch (e: AuthenticationException) {
 			delegates.remove(folder.cloud)
@@ -121,7 +124,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun move(source: CloudFolder, target: CloudFolder): CloudFolder {
 		return try {
-			source.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			source.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			require(source.cloud == target.cloud) { "Cloud of parameters must match" }
 			delegateFor(source).move(source, target)
 		} catch (e: AuthenticationException) {
@@ -133,7 +136,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun move(source: CloudFile, target: CloudFile): CloudFile {
 		return try {
-			source.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			source.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			require(source.cloud == target.cloud) { "Cloud of parameters must match" }
 			delegateFor(source).move(source, target)
 		} catch (e: AuthenticationException) {
@@ -145,7 +148,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun write(file: CloudFile, data: DataSource, progressAware: ProgressAware<UploadState>, replace: Boolean, size: Long): CloudFile {
 		return try {
-			file.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			file.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(file).write(file, data, progressAware, replace, size)
 		} catch (e: AuthenticationException) {
 			delegates.remove(file.cloud)
@@ -156,7 +159,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun read(file: CloudFile, encryptedTmpFile: File?, data: OutputStream, progressAware: ProgressAware<DownloadState>) {
 		try {
-			file.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			file.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(file).read(file, encryptedTmpFile, data, progressAware)
 		} catch (e: AuthenticationException) {
 			delegates.remove(file.cloud)
@@ -167,7 +170,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun delete(node: CloudNode) {
 		try {
-			node.cloud?.let { networkConnectionCheck.assertConnectionIsPresent(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
+			node.cloud?.let { assertConnectionUnlessOfflineCapable(it) } ?: throw IllegalStateException("Parent's cloud shouldn't be null")
 			delegateFor(node).delete(node)
 		} catch (e: AuthenticationException) {
 			delegates.remove(node.cloud)
@@ -178,7 +181,7 @@ class DispatchingCloudContentRepository @Inject constructor(
 	@Throws(BackendException::class)
 	override fun checkAuthenticationAndRetrieveCurrentAccount(cloud: Cloud): String {
 		return try {
-			networkConnectionCheck.assertConnectionIsPresent(cloud)
+			assertConnectionUnlessOfflineCapable(cloud)
 			delegateFor(cloud).checkAuthenticationAndRetrieveCurrentAccount(cloud)
 		} catch (e: AuthenticationException) {
 			delegates.remove(cloud)
@@ -237,9 +240,45 @@ class DispatchingCloudContentRepository @Inject constructor(
 	private fun createCloudContentRepositoryFor(cloud: Cloud): CloudContentRepository<Cloud, CloudNode, CloudFolder, CloudFile> {
 		for (cloudContentRepositoryFactory in cloudContentRepositoryFactories) {
 			if (cloudContentRepositoryFactory.supports(cloud)) {
-				return cloudContentRepositoryFactory.cloudContentRepositoryFor(cloud)
+				val repository = cloudContentRepositoryFactory.cloudContentRepositoryFor(cloud)
+				val cloudId = offlineCapableCloudId(cloud) ?: return repository
+				return OfflineCapableCloudContentRepository(repository, cloudId, offlineFiles.store, offlineFiles.pins) { networkConnectionCheck.isPresent }
 			}
 		}
 		throw IllegalStateException("Unsupported cloud $cloud")
+	}
+
+	/**
+	 * Forgets what was made available offline in a vault that is removed from the app.
+	 */
+	fun removeOfflineFilesOf(vaultId: Long?) {
+		vaultId ?: return
+		offlineFiles.pins.removeVault(vaultId)
+		offlineFiles.store.collectGarbage { cloudId, path -> offlineFiles.pins.isWanted(cloudId, path) }
+	}
+
+	/**
+	 * The repository that keeps [cloud]'s content for offline use, or null if it doesn't need a network.
+	 */
+	fun offlineRepositoryFor(cloud: Cloud): OfflineCapableCloudContentRepository? {
+		return delegateFor(cloud) as? OfflineCapableCloudContentRepository
+	}
+
+	/**
+	 * Clouds that need a network get offline support, see [OfflineCapableCloudContentRepository]; vaults don't need it
+	 * themselves, they get it from the cloud they are in.
+	 */
+	private fun offlineCapableCloudId(cloud: Cloud): Long? {
+		return if (cloud.requiresNetwork() && cloud !is CryptoCloud) cloud.id() else null
+	}
+
+	/**
+	 * Offline capable clouds decide themselves what works without a connection.
+	 */
+	@Throws(BackendException::class)
+	private fun assertConnectionUnlessOfflineCapable(cloud: Cloud) {
+		if (offlineCapableCloudId(cloud) == null) {
+			networkConnectionCheck.assertConnectionIsPresent(cloud)
+		}
 	}
 }

@@ -64,6 +64,7 @@ class VaultRepositoryImpl implements VaultRepository {
 	public Long delete(Vault vault) throws BackendException {
 		deregisterUnlocked(vault);
 		dispatchingCloudContentRepository.removeCloudContentRepositoryFor(cryptoCloudFactory.decryptedViewOf(vault));
+		dispatchingCloudContentRepository.removeOfflineFilesOf(vault.getId());
 		vaultDao.delete(mapper.toEntity(vault));
 		return vault.getId();
 	}

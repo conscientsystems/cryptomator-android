@@ -1,5 +1,8 @@
 package org.cryptomator.presentation.presenter
 
+import org.cryptomator.domain.repository.OfflineUsage
+import org.cryptomator.domain.usecases.cloud.ClearOfflineFilesUseCase
+import org.cryptomator.domain.usecases.cloud.GetOfflineUsageUseCase
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -48,8 +51,27 @@ class SettingsPresenter @Inject internal constructor(
 	private val networkConnectionCheck: NetworkConnectionCheck,  //
 	exceptionMappings: ExceptionHandlers,  //
 	private val fileUtil: FileUtil,  //
-	private val sharedPreferencesHandler: SharedPreferencesHandler
+	private val sharedPreferencesHandler: SharedPreferencesHandler, //
+	private val getOfflineUsageUseCase: GetOfflineUsageUseCase, //
+	private val clearOfflineFilesUseCase: ClearOfflineFilesUseCase
 ) : Presenter<SettingsView>(exceptionMappings) {
+
+	fun loadOfflineUsage() {
+		getOfflineUsageUseCase.run(object : DefaultResultHandler<OfflineUsage>() {
+			override fun onSuccess(usage: OfflineUsage) {
+				view?.showOfflineUsage(usage)
+			}
+		})
+	}
+
+	fun onClearOfflineFilesClicked() {
+		clearOfflineFilesUseCase.run(object : DefaultResultHandler<Void?>() {
+			override fun onSuccess(result: Void?) {
+				view?.showMessage(R.string.screen_settings_offline_files_cleared)
+				loadOfflineUsage()
+			}
+		})
+	}
 
 	fun checkAutoUploadEnabledAndBatteryOptimizationDisabled() {
 		if (sharedPreferencesHandler.usePhotoUpload()) {
@@ -288,6 +310,6 @@ class SettingsPresenter @Inject internal constructor(
 	}
 
 	init {
-		unsubscribeOnDestroy(updateCheckUseCase, updateUseCase)
+		unsubscribeOnDestroy(updateCheckUseCase, updateUseCase, getOfflineUsageUseCase, clearOfflineFilesUseCase)
 	}
 }

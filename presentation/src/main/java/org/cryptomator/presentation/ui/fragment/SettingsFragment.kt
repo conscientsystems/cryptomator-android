@@ -17,6 +17,7 @@ import org.cryptomator.presentation.BuildConfig
 import org.cryptomator.presentation.R
 import org.cryptomator.presentation.intent.Intents
 import org.cryptomator.presentation.licensing.LicenseEnforcer
+import org.cryptomator.domain.repository.OfflineUsage
 import org.cryptomator.presentation.presenter.ContextHolder
 import org.cryptomator.presentation.service.PhotoContentJob
 import org.cryptomator.presentation.service.ProductInfo
@@ -152,12 +153,30 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 		}
 	}
 
+	fun showOfflineUsage(usage: OfflineUsage) {
+		val text = SpannableString(getString(R.string.screen_settings_offline_files_usage_summary, readableSize(usage.offlineFiles), readableSize(usage.other)))
+		text.setSpan(ForegroundColorSpan(ContextCompat.getColor(activity(), R.color.textColorLight)), 0, text.length, 0)
+		(findPreference(OFFLINE_FILES_USAGE_ITEM_KEY) as Preference?)?.summaryProvider = Preference.SummaryProvider<Preference> { text }
+	}
+
 	private fun setupLruCacheSize() {
 		val preference = findPreference(DISPLAY_LRU_CACHE_SIZE_ITEM_KEY) as Preference?
 
 		val size = LruFileCacheUtil(requireContext()).totalSize()
 
-		val readableSize: String = if (size > 0) {
+		val lruCacheSize = SpannableString(readableSize(size))
+
+		lruCacheSize.setSpan( //
+			ForegroundColorSpan(ContextCompat.getColor(activity(), R.color.textColorLight)), //
+			0, lruCacheSize.length, 0
+		)
+		preference?.summaryProvider = Preference.SummaryProvider<Preference> {
+			lruCacheSize
+		}
+	}
+
+	private fun readableSize(size: Long): String {
+		return if (size > 0) {
 			val units = arrayOf("B", "KB", "MB", "GB", "TB")
 			val unitIndex = (log10(size.toDouble()) / 3).toInt()
 			val unitValue = (1 shl unitIndex * 10).toDouble()
@@ -167,16 +186,6 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 					+ units[unitIndex])
 		} else {
 			"0 B"
-		}
-
-		val lruCacheSize = SpannableString(readableSize)
-
-		lruCacheSize.setSpan( //
-			ForegroundColorSpan(ContextCompat.getColor(activity(), R.color.textColorLight)), //
-			0, lruCacheSize.length, 0
-		)
-		preference?.summaryProvider = Preference.SummaryProvider<Preference> {
-			lruCacheSize
 		}
 	}
 
@@ -318,6 +327,11 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 		super.onResume()
 		(findPreference(SEND_ERROR_REPORT_ITEM_KEY) as Preference?)?.onPreferenceClickListener = sendErrorReportClickListener
 		(findPreference(LRU_CACHE_CLEAR_ITEM_KEY) as Preference?)?.onPreferenceClickListener = clearCacheClickListener
+		(findPreference(OFFLINE_FILES_CLEAR_ITEM_KEY) as Preference?)?.onPreferenceClickListener = Preference.OnPreferenceClickListener {
+			activity().presenter().onClearOfflineFilesClicked()
+			true
+		}
+		activity().presenter().loadOfflineUsage()
 		(findPreference(CLEAR_TRUSTED_HUB_HOSTS) as Preference?)?.onPreferenceClickListener = clearTrustedHubHostsClickListener
 		(findPreference(SharedPreferencesHandler.DEBUG_MODE) as Preference?)?.onPreferenceChangeListener = debugModeChangedListener
 		(findPreference(SharedPreferencesHandler.DISABLE_APP_WHEN_OBSCURED) as Preference?)?.onPreferenceChangeListener = disableAppWhenObscuredChangedListener
@@ -428,6 +442,8 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 		private const val UPDATE_INTERVAL_ITEM_KEY = "updateInterval"
 		private const val DISPLAY_LRU_CACHE_SIZE_ITEM_KEY = "displayLruCacheSize"
 		private const val LRU_CACHE_CLEAR_ITEM_KEY = "lruCacheClear"
+		private const val OFFLINE_FILES_USAGE_ITEM_KEY = "offlineFilesUsage"
+		private const val OFFLINE_FILES_CLEAR_ITEM_KEY = "offlineFilesClear"
 		private const val CLEAR_TRUSTED_HUB_HOSTS = "clearTrustedHubHosts"
 	}
 

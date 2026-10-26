@@ -16,6 +16,7 @@ import org.cryptomator.presentation.ui.dialog.DisableSecureScreenDisclaimerDialo
 import org.cryptomator.presentation.ui.dialog.MicrosoftWorkaroundDisclaimerDialog
 import org.cryptomator.presentation.ui.dialog.UpdateAppAvailableDialog
 import org.cryptomator.presentation.ui.dialog.UpdateAppDialog
+import org.cryptomator.domain.repository.OfflineUsage
 import org.cryptomator.presentation.ui.fragment.SettingsFragment
 import javax.inject.Inject
 
@@ -88,6 +89,10 @@ class SettingsActivity : BaseActivity<ActivitySettingsBinding>(ActivitySettingsB
 
 	override fun refreshUpdateTimeView() {
 		settingsFragment().setupUpdateCheck()
+	}
+
+	override fun showOfflineUsage(usage: OfflineUsage) {
+		settingsFragment().showOfflineUsage(usage)
 	}
 
 	override fun disableAutoUpload() {

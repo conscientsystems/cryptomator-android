@@ -67,6 +67,12 @@
 			app:drawableStartCompat="@drawable/ic_share" />
 
 		<TextView
+			android:id="@+id/offline_toggle"
+			style="@style/AppTheme.ListItem"
+			android:text="@string/screen_file_browser_node_action_make_available_offline"
+			app:drawableStartCompat="@drawable/ic_offline_pin" />
+
+		<TextView
 			android:id="@+id/open_with_text"
 			style="@style/AppTheme.ListItem"
 			android:text="@string/screen_file_browser_node_action_open_with_text"

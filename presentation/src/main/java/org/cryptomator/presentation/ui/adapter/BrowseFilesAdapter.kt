@@ -29,6 +29,7 @@ import org.cryptomator.presentation.util.FileIcon
 import org.cryptomator.presentation.util.FileSizeHelper
 import org.cryptomator.presentation.util.FileUtil
 import org.cryptomator.presentation.util.ResourceHelper.Companion.getDrawable
+import org.cryptomator.domain.repository.OfflineFilesRepository
 import org.cryptomator.util.SharedPreferencesHandler
 import javax.inject.Inject
 
@@ -37,7 +38,8 @@ constructor(
 	private val dateHelper: DateHelper, //
 	private val fileSizeHelper: FileSizeHelper, //
 	private val fileUtil: FileUtil, //
-	private val sharedPreferencesHandler: SharedPreferencesHandler
+	private val sharedPreferencesHandler: SharedPreferencesHandler, //
+	private val offlineFilesRepository: OfflineFilesRepository
 ) : RecyclerViewBaseAdapter<CloudNodeModel<*>, BrowseFilesAdapter.ItemClickListener, VaultContentViewHolder, ItemBrowseFilesNodeBinding>(CloudNodeModelNameAZComparator()), FastScrollRecyclerView.SectionedAdapter {
 
 	private var chooseCloudNodeSettings: ChooseCloudNodeSettings? = null
@@ -136,6 +138,7 @@ constructor(
 
 		private fun bindNodeImage(node: CloudNodeModel<*>) {
 			binding.cloudNodeImage.setImageResource(bindCloudNodeImage(node))
+			binding.offlineBadge.visibility = if (offlineFilesRepository.isAvailableOffline(node.toCloudNode())) VISIBLE else GONE
 		}
 
 		private fun bindCloudNodeImage(cloudNodeModel: CloudNodeModel<*>): Int {

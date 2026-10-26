@@ -18,6 +18,8 @@ class FolderSettingsBottomSheet : BaseBottomSheet<FolderSettingsBottomSheet.Call
 		fun onDeleteNodeClicked(cloudFolderModel: CloudNodeModel<*>)
 		fun onMoveFolderClicked(cloudFolderModel: CloudFolderModel)
 		fun onExportFolderClicked(cloudFolderModel: CloudFolderModel)
+		fun onMakeAvailableOfflineClicked(node: CloudNodeModel<*>)
+		fun onRemoveFromOfflineClicked(node: CloudNodeModel<*>)
 	}
 
 	override fun setupView() {
@@ -26,6 +28,11 @@ class FolderSettingsBottomSheet : BaseBottomSheet<FolderSettingsBottomSheet.Call
 
 		binding.tvFolderName.text = cloudFolderModel.name
 		binding.tvFolderPath.text = parentFolderPath
+
+		bindOfflineToggle(binding.offlineToggle, cloudFolderModel, OfflineState.entries[requireArguments().getInt(OFFLINE_STATE_ARG)]) { node, makeAvailable ->
+			if (makeAvailable) callback?.onMakeAvailableOfflineClicked(node) else callback?.onRemoveFromOfflineClicked(node)
+			dismiss()
+		}
 
 		binding.shareFolder.setOnClickListener {
 			callback?.onShareFolderClicked(cloudFolderModel)
@@ -54,9 +61,10 @@ class FolderSettingsBottomSheet : BaseBottomSheet<FolderSettingsBottomSheet.Call
 
 		private const val FOLDER_ARG = "folder"
 		private const val PARENT_FOLDER_PATH_ARG = "parentFolderPath"
-		fun newInstance(cloudFolderModel: CloudFolderModel, parentFolderPath: String): FolderSettingsBottomSheet {
+		fun newInstance(cloudFolderModel: CloudFolderModel, parentFolderPath: String, offlineState: OfflineState): FolderSettingsBottomSheet {
 			val dialog = FolderSettingsBottomSheet()
 			val args = Bundle()
+			args.putInt(OFFLINE_STATE_ARG, offlineState.ordinal)
 			args.putSerializable(FOLDER_ARG, cloudFolderModel)
 			args.putString(PARENT_FOLDER_PATH_ARG, parentFolderPath)
 			dialog.arguments = args
