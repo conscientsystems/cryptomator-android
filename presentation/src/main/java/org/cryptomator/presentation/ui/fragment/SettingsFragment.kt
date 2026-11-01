@@ -17,7 +17,11 @@ import org.cryptomator.presentation.BuildConfig
 import org.cryptomator.presentation.R
 import org.cryptomator.presentation.intent.Intents
 import org.cryptomator.presentation.licensing.LicenseEnforcer
+import org.cryptomator.domain.repository.OfflineSyncListener
+import org.cryptomator.domain.repository.OfflineSyncState
 import org.cryptomator.domain.repository.OfflineUsage
+import org.cryptomator.presentation.CryptomatorApp
+import org.cryptomator.presentation.service.OfflineSyncManager
 import org.cryptomator.presentation.presenter.ContextHolder
 import org.cryptomator.presentation.service.PhotoContentJob
 import org.cryptomator.presentation.service.ProductInfo
@@ -151,6 +155,27 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 		preference?.summaryProvider = Preference.SummaryProvider<Preference> {
 			versionName
 		}
+	}
+
+	private val offlineSyncListener = OfflineSyncListener { state ->
+		view?.post {
+			showOfflineSyncState(state)
+			if (state.phase == OfflineSyncState.Phase.DONE) {
+				activity().presenter().loadOfflineUsage()
+			}
+		}
+	}
+
+	private fun offlineFilesRepository() = (requireActivity().application as CryptomatorApp).getComponent().offlineFilesRepository()
+
+	/**
+	 * How far the offline sync has come, e.g. "Downloading 37 of 412 files · 1.2 GB of 8.4 GB".
+	 */
+	private fun showOfflineSyncState(state: OfflineSyncState) {
+		val vault = state.vaultName?.let { "$it: " } ?: ""
+		val text = SpannableString(vault + OfflineSyncManager.describe(requireContext(), state))
+		text.setSpan(ForegroundColorSpan(ContextCompat.getColor(activity(), R.color.textColorLight)), 0, text.length, 0)
+		(findPreference(OFFLINE_FILES_SYNC_ITEM_KEY) as Preference?)?.summaryProvider = Preference.SummaryProvider<Preference> { text }
 	}
 
 	fun showOfflineUsage(usage: OfflineUsage) {
@@ -332,6 +357,8 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 			true
 		}
 		activity().presenter().loadOfflineUsage()
+		showOfflineSyncState(OfflineSyncManager.state())
+		offlineFilesRepository().addSyncListener(offlineSyncListener)
 		(findPreference(CLEAR_TRUSTED_HUB_HOSTS) as Preference?)?.onPreferenceClickListener = clearTrustedHubHostsClickListener
 		(findPreference(SharedPreferencesHandler.DEBUG_MODE) as Preference?)?.onPreferenceChangeListener = debugModeChangedListener
 		(findPreference(SharedPreferencesHandler.DISABLE_APP_WHEN_OBSCURED) as Preference?)?.onPreferenceChangeListener = disableAppWhenObscuredChangedListener
@@ -356,6 +383,7 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 	}
 
 	override fun onPause() {
+		offlineFilesRepository().removeSyncListener(offlineSyncListener)
 		sharedPreferencesHandler.removeLicenseChangedListeners(licenseChangeListener)
 		super.onPause()
 	}
@@ -443,6 +471,7 @@ class SettingsFragment : PreferenceFragmentCompatLayout() {
 		private const val DISPLAY_LRU_CACHE_SIZE_ITEM_KEY = "displayLruCacheSize"
 		private const val LRU_CACHE_CLEAR_ITEM_KEY = "lruCacheClear"
 		private const val OFFLINE_FILES_USAGE_ITEM_KEY = "offlineFilesUsage"
+		private const val OFFLINE_FILES_SYNC_ITEM_KEY = "offlineFilesSync"
 		private const val OFFLINE_FILES_CLEAR_ITEM_KEY = "offlineFilesClear"
 		private const val CLEAR_TRUSTED_HUB_HOSTS = "clearTrustedHubHosts"
 	}

@@ -11,6 +11,7 @@ interface BrowseFilesView : View {
 	val folder: CloudFolderModel
 
 	fun showCloudNodes(nodes: List<CloudNodeModel<*>>)
+	fun refreshOfflineBadges()
 	fun addOrUpdateCloudNode(node: CloudNodeModel<*>)
 	fun deleteCloudNodesFromAdapter(nodes: List<CloudNodeModel<*>>)
 	fun replaceRenamedCloudNode(node: CloudNodeModel<out CloudNode>)

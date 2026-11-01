@@ -41,6 +41,29 @@
 	</item>
 
 	<item
+		android:id="@+id/action_view"
+		android:icon="@drawable/ic_view_grid"
+		android:title="@string/screen_file_browser_view"
+		app:showAsAction="ifRoom">
+		<menu>
+			<group android:checkableBehavior="single">
+				<item
+					android:id="@+id/action_view_list"
+					android:title="@string/screen_file_browser_view_list" />
+				<item
+					android:id="@+id/action_view_grid_small"
+					android:title="@string/screen_file_browser_view_grid_small" />
+				<item
+					android:id="@+id/action_view_grid_medium"
+					android:title="@string/screen_file_browser_view_grid_medium" />
+				<item
+					android:id="@+id/action_view_grid_large"
+					android:title="@string/screen_file_browser_view_grid_large" />
+			</group>
+		</menu>
+	</item>
+
+	<item
 		android:id="@+id/action_select_items"
 		android:title="@string/screen_file_browser_select_items"
 		app:showAsAction="never" />

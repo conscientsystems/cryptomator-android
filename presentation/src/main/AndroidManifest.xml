@@ -231,6 +231,10 @@
 				the screen is locked. All of this requires this permission." />
 		</service>
 
+		<receiver
+			android:name=".service.OfflineSyncNotification$CancelReceiver"
+			android:exported="false" />
+
 		<service
 			android:name=".service.AutoUploadService"
 			android:enabled="true" />

@@ -142,6 +142,11 @@ class OfflineCapableCloudContentRepository(
 	 * Downloads [file] into the store, if it is wanted and its stored copy is outdated or missing. Used to fetch the
 	 * files made available offline in the background.
 	 */
+	/**
+	 * Whether the stored copy of [file] matches what the cloud listed (size and modification date).
+	 */
+	fun isCurrent(file: CloudFile): Boolean = store.matches(cloudId, file.path, file.size, file.modified?.time)
+
 	fun prefetch(file: CloudFile, progressAware: ProgressAware<DownloadState>): Boolean {
 		if (store.matches(cloudId, file.path, file.size, file.modified?.time)) {
 			return false

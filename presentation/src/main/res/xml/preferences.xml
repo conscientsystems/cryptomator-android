@@ -152,6 +152,10 @@
 	<PreferenceCategory android:title="@string/screen_settings_offline_files">
 
 		<androidx.preference.PreferenceScreen
+			android:key="offlineFilesSync"
+			android:title="@string/screen_settings_offline_files_sync" />
+
+		<androidx.preference.PreferenceScreen
 			android:key="offlineFilesUsage"
 			android:title="@string/screen_settings_offline_files_usage" />
 

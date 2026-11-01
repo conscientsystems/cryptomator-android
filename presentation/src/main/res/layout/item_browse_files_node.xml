@@ -69,7 +69,23 @@
 
 	</RelativeLayout>
 
+	<!-- grid view: the name of a file that has no thumbnail (a document, say), over the bottom of its tile -->
 	<TextView
+		android:id="@+id/grid_label"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_alignParentBottom="true"
+		android:layout_margin="2dp"
+		android:background="#99000000"
+		android:ellipsize="middle"
+		android:maxLines="2"
+		android:padding="3dp"
+		android:textColor="#FFFFFF"
+		android:textSize="11sp"
+		android:visibility="gone" />
+
+	<TextView
+		android:id="@+id/divider"
 		android:layout_width="match_parent"
 		android:layout_height="1dp"
 		android:layout_alignParentBottom="true"

@@ -1,11 +1,15 @@
 package org.cryptomator.presentation.ui.adapter
 
 import android.os.PatternMatcher
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.widget.ImageView
+import android.widget.RelativeLayout
 import com.simplecityapps.recyclerview_fastscroll.views.FastScrollRecyclerView
 import org.cryptomator.domain.CloudNode
 import org.cryptomator.presentation.R
@@ -43,6 +47,59 @@ constructor(
 	private val offlineFilesRepository: OfflineFilesRepository, //
 	private val thumbnailLoader: ThumbnailLoader
 ) : RecyclerViewBaseAdapter<CloudNodeModel<*>, BrowseFilesAdapter.ItemClickListener, VaultContentViewHolder, ItemBrowseFilesNodeBinding>(CloudNodeModelNameAZComparator()), FastScrollRecyclerView.SectionedAdapter {
+
+	/**
+	 * List, or a grid of square tiles: in the grid, files are tiles (thumbnail, or type icon and name), folders stay
+	 * full-width rows. Selection modes always use the list rows.
+	 */
+	enum class ViewMode(val key: String, val tileDp: Int) {
+		LIST("list", 0), GRID_SMALL("grid_small", 80), GRID_MEDIUM("grid_medium", 120), GRID_LARGE("grid_large", 180);
+
+		val isGrid: Boolean
+			get() = this != LIST
+
+		companion object {
+
+			fun of(key: String?): ViewMode = values().firstOrNull { it.key == key } ?: LIST
+		}
+	}
+
+	var viewMode: ViewMode = ViewMode.LIST
+		private set
+	private var tileSizePx = 0
+
+	fun setViewMode(mode: ViewMode, tileSizePx: Int) {
+		this.viewMode = mode
+		this.tileSizePx = tileSizePx
+		notifyDataSetChanged()
+	}
+
+	/**
+	 * Whether the item at [position] is shown as a grid tile (one span), rather than a full-width row.
+	 */
+	fun isGridTile(position: Int): Boolean {
+		if (!viewMode.isGrid || isInSelectionMode || isNavigationMode(SELECT_ITEMS) || position < 0 || position >= itemCount) {
+			return false
+		}
+		return getItem(position) is CloudFileModel
+	}
+
+	override fun getItemViewType(position: Int): Int = if (isGridTile(position)) VIEW_TYPE_TILE else VIEW_TYPE_ROW
+
+	/**
+	 * Refreshes only the offline badges (the sync makes progress), without rebinding the thumbnails.
+	 */
+	fun refreshOfflineBadges() {
+		notifyItemRangeChanged(0, itemCount, PAYLOAD_OFFLINE_BADGE)
+	}
+
+	override fun onBindViewHolder(holder: VaultContentViewHolder, position: Int, payloads: MutableList<Any>) {
+		if (payloads.isNotEmpty() && payloads.all { it == PAYLOAD_OFFLINE_BADGE }) {
+			holder.bindOfflineBadge()
+		} else {
+			super.onBindViewHolder(holder, position, payloads)
+		}
+	}
 
 	private var chooseCloudNodeSettings: ChooseCloudNodeSettings? = null
 	private var navigationMode: ChooseCloudNodeSettings.NavigationMode? = null
@@ -126,26 +183,127 @@ constructor(
 
 		private var bound: CloudNodeModel<*>? = null
 
+		private var boundPosition = -1
+
 		override fun bind(position: Int) {
+			boundPosition = position
 			bound = getItem(position)
 			bound?.let { internalBind(it) }
 		}
 
+		private var tile = false
+
 		private fun internalBind(node: CloudNodeModel<*>) {
+			tile = isGridTile(boundPosition)
+			applyLayout()
 			bindNodeImage(node)
 			bindSettings(node)
 			bindLongNodeClick(node)
 			bindFileOrFolder(node)
+			applyTileVisibility(node)
 		}
 
 		private fun bindNodeImage(node: CloudNodeModel<*>) {
 			binding.cloudNodeImage.setImageResource(bindCloudNodeImage(node))
+			if (tile) {
+				showTypeIconInTile()
+			}
 			if (node is CloudFileModel) {
-				thumbnailLoader.load(node.toCloudNode(), binding.cloudNodeImage)
+				val isTile = tile
+				thumbnailLoader.load(node.toCloudNode(), binding.cloudNodeImage, if (isTile) tileSizePx * 3 / 4 else 0) { image ->
+					if (isTile) {
+						image.setPadding(0, 0, 0, 0)
+						image.scaleType = ImageView.ScaleType.CENTER_CROP
+						binding.gridLabel.visibility = GONE // a picture speaks for itself
+					}
+				}
 			} else {
 				binding.cloudNodeImage.tag = null
 			}
-			binding.offlineBadge.visibility = if (offlineFilesRepository.isAvailableOffline(node.toCloudNode())) VISIBLE else GONE
+			bindOfflineBadge()
+		}
+
+		/**
+		 * Green: on the device. Grey: available offline, but not downloaded (yet).
+		 */
+		fun bindOfflineBadge() {
+			val node = bound?.toCloudNode() ?: return
+			if (!offlineFilesRepository.isAvailableOffline(node)) {
+				binding.offlineBadge.visibility = GONE
+				return
+			}
+			val stored = offlineFilesRepository.isStoredOffline(node)
+			binding.offlineBadge.setImageResource(if (stored) R.drawable.ic_offline_badge else R.drawable.ic_offline_badge_pending)
+			binding.offlineBadge.contentDescription = itemView.context.getString(if (stored) R.string.screen_file_browser_available_offline else R.string.screen_file_browser_offline_pending)
+			binding.offlineBadge.visibility = VISIBLE
+		}
+
+		private fun dp(value: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), itemView.resources.displayMetrics).toInt()
+
+		/**
+		 * Rows and tiles share one layout; a recycled view can be either, so every size is set both ways.
+		 */
+		private fun applyLayout() {
+			val root = binding.root
+			root.layoutParams = root.layoutParams.apply { height = if (tile) tileSizePx else dp(72) }
+			val image = binding.cloudNodeImage
+			val imageParams = image.layoutParams as RelativeLayout.LayoutParams
+			val badgeParams = binding.offlineBadge.layoutParams as RelativeLayout.LayoutParams
+			if (tile) {
+				imageParams.width = MATCH_PARENT
+				imageParams.height = MATCH_PARENT
+				imageParams.setMargins(dp(1), dp(1), dp(1), dp(1))
+				imageParams.marginStart = dp(1)
+				imageParams.removeRule(RelativeLayout.CENTER_VERTICAL)
+				badgeParams.removeRule(RelativeLayout.ALIGN_BOTTOM) // top right: clear of the name label
+				badgeParams.addRule(RelativeLayout.ALIGN_TOP, R.id.cloud_node_image)
+				badgeParams.setMargins(0, dp(5), dp(5), 0)
+				badgeParams.marginEnd = dp(5)
+			} else {
+				val size = itemView.resources.getDimensionPixelSize(R.dimen.thumbnail_size)
+				imageParams.width = size
+				imageParams.height = size
+				imageParams.setMargins(0, 0, 0, 0)
+				imageParams.marginStart = dp(16)
+				imageParams.addRule(RelativeLayout.CENTER_VERTICAL)
+				badgeParams.removeRule(RelativeLayout.ALIGN_TOP)
+				badgeParams.addRule(RelativeLayout.ALIGN_BOTTOM, R.id.cloud_node_image)
+				badgeParams.setMargins(0, 0, -dp(4), -dp(4))
+				badgeParams.marginEnd = -dp(4)
+				image.setPadding(0, 0, 0, 0)
+				image.scaleType = ImageView.ScaleType.FIT_CENTER
+			}
+			image.layoutParams = imageParams
+			binding.offlineBadge.layoutParams = badgeParams
+		}
+
+		private fun showTypeIconInTile() {
+			val padding = tileSizePx / 4
+			binding.cloudNodeImage.setPadding(padding, padding, padding, padding)
+			binding.cloudNodeImage.scaleType = ImageView.ScaleType.FIT_CENTER
+		}
+
+		/**
+		 * A tile shows no names, details or buttons - only the picture (or the type icon and the name of a file without
+		 * one). Tap opens, a long press shows the actions.
+		 */
+		private fun applyTileVisibility(node: CloudNodeModel<*>) {
+			binding.divider.visibility = if (tile) GONE else VISIBLE
+			if (!tile) {
+				binding.gridLabel.visibility = GONE
+				binding.controls.visibility = VISIBLE
+				return
+			}
+			binding.llCloudFileContent.cloudFileContent.visibility = GONE
+			binding.llCloudFolderContent.cloudFolderContent.visibility = GONE
+			binding.controls.visibility = GONE
+			val hasThumbnail = binding.cloudNodeImage.scaleType == ImageView.ScaleType.CENTER_CROP
+			binding.gridLabel.text = node.name
+			binding.gridLabel.visibility = if (hasThumbnail) GONE else VISIBLE
+			itemView.setOnLongClickListener {
+				callback.onNodeSettingsClicked(node)
+				true
+			}
 		}
 
 		private fun bindCloudNodeImage(cloudNodeModel: CloudNodeModel<*>): Int {
@@ -333,6 +491,9 @@ constructor(
 			if (uiState !== state) {
 				uiState = state
 				uiState?.apply()
+				if (tile) {
+					bound?.let { applyTileVisibility(it) }
+				}
 			}
 		}
 
@@ -466,6 +627,13 @@ constructor(
 
 	fun setSort(comparator: Comparator<CloudNodeModel<*>>) {
 		updateComparator(comparator)
+	}
+
+	companion object {
+
+		private const val VIEW_TYPE_ROW = 0
+		private const val VIEW_TYPE_TILE = 1
+		private const val PAYLOAD_OFFLINE_BADGE = "offlineBadge"
 	}
 
 	interface ItemClickListener {

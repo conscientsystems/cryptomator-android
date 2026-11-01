@@ -16,7 +16,8 @@ import kotlin.math.min
  */
 object ThumbnailGenerator {
 
-	const val SIZE_PX = 192
+	// big enough for the large grid tiles; older 192 px thumbnails are made again when a large tile needs them
+	const val SIZE_PX = 384
 	private const val JPEG_QUALITY = 80
 
 	fun fromImage(bytes: ByteArray): ByteArray? {

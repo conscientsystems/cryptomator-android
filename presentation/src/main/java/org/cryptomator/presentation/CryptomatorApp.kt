@@ -83,6 +83,7 @@ class CryptomatorApp : Application(), HasComponent<ApplicationComponent> {
 			registerActivityLifecycleCallbacks(PurchaseRevokedToastObserver(sharedPreferencesHandler))
 		}
 		AppCompatDelegate.setDefaultNightMode(sharedPreferencesHandler.screenStyleMode)
+		org.cryptomator.presentation.service.OfflineSyncManager.init(this, applicationComponent.offlineFilesRepository())
 		cleanupCache()
 
 		if (sharedPreferencesHandler.microsoftWorkaround()) {

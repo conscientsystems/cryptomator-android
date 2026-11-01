@@ -512,4 +512,24 @@
 	<string name="screen_settings_offline_files_clear">Fjern alle offline-filer</string>
 	<string name="screen_settings_offline_files_clear_summary">Filer og mapper bliver i dine bokse, kun kopierne på denne enhed fjernes</string>
 	<string name="screen_settings_offline_files_cleared">Alle offline-filer er fjernet</string>
+	<string name="offline_sync_channel">Offline-filer</string>
+	<string name="offline_sync_title">Offline-filer: %1$s</string>
+	<string name="offline_sync_idle">Ikke opdateret siden appen startede</string>
+	<string name="offline_sync_scanning">Finder filer… %1$d mapper, %2$d filer</string>
+	<string name="offline_sync_all_current">Alle %1$d filer er på telefonen</string>
+	<string name="offline_sync_downloading">Henter %1$d af %2$d filer · %3$s af %4$s</string>
+	<string name="offline_sync_interrupted">Afbrudt: %1$d af %2$d filer er på telefonen</string>
+	<string name="offline_sync_done_failed">%1$d af %2$d filer er på telefonen, %3$d fejlede</string>
+	<string name="offline_sync_done">Færdig: alle %1$d filer er på telefonen</string>
+	<string name="offline_sync_cancel">Stop</string>
+	<string name="screen_settings_offline_files_sync">Status</string>
+	<string name="screen_file_browser_offline_pending">Tilgængelig offline, ikke hentet endnu</string>
+	<string name="screen_file_browser_view">Visning</string>
+	<string name="screen_file_browser_view_list">Liste</string>
+	<string name="screen_file_browser_view_grid_small">Gitter, små</string>
+	<string name="screen_file_browser_view_grid_medium">Gitter, mellem</string>
+	<string name="screen_file_browser_view_grid_large">Gitter, store</string>
+	<string name="offline_sync_interrupted_no_connection">Stoppet: ingen forbindelse til serveren</string>
+	<string name="offline_sync_interrupted_early">Stoppet før hentningen</string>
+	<string name="offline_sync_interrupted_no_connection_counts">Ingen forbindelse: %1$d af %2$d filer er på telefonen</string>
 </resources>

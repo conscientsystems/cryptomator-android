@@ -13,6 +13,7 @@ import org.cryptomator.domain.Vault
 import org.cryptomator.domain.exception.FatalBackendException
 import org.cryptomator.domain.usecases.cloud.Flag
 import org.hamcrest.CoreMatchers.`is`
+import org.cryptomator.domain.repository.OfflineSyncState
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -121,6 +122,54 @@ class OfflineFilesSyncTest {
 
 		assertThat(offlineFiles.pins.isWanted(CLOUD_ID, a.cloudFile.path), `is`(false))
 		assertThat(inTest.isAvailableOffline(a), `is`(false))
+	}
+
+	@Test
+	fun theSyncReportsHowFarItHasCome() {
+		whenever(offlineRepository.isCurrent(a.cloudFile)).thenReturn(true) // already on the device
+		inTest.makeAvailableOffline(photos)
+		val states = java.util.concurrent.CopyOnWriteArrayList<org.cryptomator.domain.repository.OfflineSyncState>()
+		inTest.addSyncListener { states.add(it) }
+
+		inTest.sync(cryptoCloud, NOT_CANCELLED)
+
+		val phases = states.map { it.phase }.distinct()
+		assertThat(phases, `is`(listOf(OfflineSyncState.Phase.SCANNING, OfflineSyncState.Phase.DOWNLOADING, OfflineSyncState.Phase.DONE)))
+		val done = inTest.syncState()
+		assertThat(done.vaultName, `is`("v"))
+		assertThat(done.filesFound, `is`(2))
+		assertThat(done.filesToDownload, `is`(1)) // only b
+		assertThat(done.filesDownloaded, `is`(1))
+		assertThat(done.bytesToDownload, `is`(10L))
+		assertThat(done.bytesDownloaded, `is`(10L))
+		assertThat(done.filesAvailable, `is`(2))
+		assertThat(done.interrupted, `is`(false))
+		verify(offlineRepository, never()).prefetch(eq(a.cloudFile), any())
+	}
+
+	@Test
+	fun aCancelledSyncIsReportedAsInterrupted() {
+		inTest.makeAvailableOffline(photos)
+		var calls = 0
+		whenever(offlineRepository.prefetch(any(), any())).thenAnswer { calls++; true }
+
+		inTest.sync(cryptoCloud, Flag { calls >= 1 })
+
+		assertThat(inTest.syncState().phase, `is`(OfflineSyncState.Phase.DONE))
+		assertThat(inTest.syncState().interrupted, `is`(true))
+		assertThat(calls, `is`(1))
+	}
+
+	@Test
+	fun aFileIsStoredOfflineOnlyWhenItsCopyIsCurrent() {
+		inTest.makeAvailableOffline(photos)
+		whenever(offlineRepository.isCurrent(a.cloudFile)).thenReturn(true)
+		whenever(offlineRepository.isCurrent(b.cloudFile)).thenReturn(false)
+		whenever(dispatching.offlineRepositoryFor(underlyingCloud)).thenReturn(offlineRepository)
+
+		assertThat(inTest.isStoredOffline(a), `is`(true))
+		assertThat(inTest.isStoredOffline(b), `is`(false)) // pending
+		assertThat(inTest.isStoredOffline(other), `is`(false)) // not available offline at all
 	}
 
 	private fun cryptoFile(parent: CryptoFolder, name: String, ciphertextPath: String): CryptoFile {

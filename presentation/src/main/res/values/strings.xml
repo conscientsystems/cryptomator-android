@@ -797,4 +797,24 @@
 	<string name="screen_settings_offline_files_clear">Remove all offline files</string>
 	<string name="screen_settings_offline_files_clear_summary">Files and folders stay in your vaults, only the copies on this device are removed</string>
 	<string name="screen_settings_offline_files_cleared">All offline files removed</string>
+	<string name="offline_sync_channel">Offline files</string>
+	<string name="offline_sync_title">Offline files: %1$s</string>
+	<string name="offline_sync_idle">Not updated since the app started</string>
+	<string name="offline_sync_scanning">Looking for files… %1$d folders, %2$d files</string>
+	<string name="offline_sync_all_current">All %1$d files are on this device</string>
+	<string name="offline_sync_downloading">Downloading %1$d of %2$d files · %3$s of %4$s</string>
+	<string name="offline_sync_interrupted">Interrupted: %1$d of %2$d files on this device</string>
+	<string name="offline_sync_done_failed">%1$d of %2$d files on this device, %3$d failed</string>
+	<string name="offline_sync_done">Done: all %1$d files are on this device</string>
+	<string name="offline_sync_cancel">Stop</string>
+	<string name="screen_settings_offline_files_sync">Status</string>
+	<string name="screen_file_browser_offline_pending">Available offline, not downloaded yet</string>
+	<string name="screen_file_browser_view">View</string>
+	<string name="screen_file_browser_view_list">List</string>
+	<string name="screen_file_browser_view_grid_small">Grid, small</string>
+	<string name="screen_file_browser_view_grid_medium">Grid, medium</string>
+	<string name="screen_file_browser_view_grid_large">Grid, large</string>
+	<string name="offline_sync_interrupted_no_connection">Stopped: no connection to the server</string>
+	<string name="offline_sync_interrupted_early">Stopped before downloading</string>
+	<string name="offline_sync_interrupted_no_connection_counts">No connection: %1$d of %2$d files on this device</string>
 </resources>

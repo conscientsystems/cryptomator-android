@@ -223,6 +223,10 @@ class BrowseFilesActivity : BaseActivity<ActivityLayoutBinding>(ActivityLayoutBi
 			}
 			true
 		}
+		R.id.action_view_list -> setViewMode("list")
+		R.id.action_view_grid_small -> setViewMode("grid_small")
+		R.id.action_view_grid_medium -> setViewMode("grid_medium")
+		R.id.action_view_grid_large -> setViewMode("grid_large")
 		R.id.action_sort_az -> {
 			browseFilesFragment().setSort(CloudNodeModelNameAZComparator())
 			browseFilesPresenter.onRefreshTriggered(browseFilesFragment().folder)
@@ -273,6 +277,13 @@ class BrowseFilesActivity : BaseActivity<ActivityLayoutBinding>(ActivityLayoutBi
 			menu.findItem(R.id.action_export_items).isEnabled = enableGeneralSelectionActions
 			menu.findItem(R.id.action_share_items).isEnabled = enableGeneralSelectionActions
 		}
+
+		when (sharedPreferencesHandler.browseViewMode()) {
+			"grid_small" -> R.id.action_view_grid_small
+			"grid_medium" -> R.id.action_view_grid_medium
+			"grid_large" -> R.id.action_view_grid_large
+			else -> R.id.action_view_list
+		}.let { menu.findItem(it)?.isChecked = true }
 
 		val searchView = menu.findItem(R.id.action_search).actionView as SearchView
 		searchView.setOnQueryTextListener(this)
@@ -478,6 +489,17 @@ class BrowseFilesActivity : BaseActivity<ActivityLayoutBinding>(ActivityLayoutBi
 
 	override fun showCloudNodes(nodes: List<CloudNodeModel<*>>) {
 		browseFilesFragment().show(nodes)
+	}
+
+	override fun refreshOfflineBadges() {
+		browseFilesFragment().refreshOfflineBadges()
+	}
+
+	private fun setViewMode(mode: String): Boolean {
+		sharedPreferencesHandler.setBrowseViewMode(mode)
+		browseFilesFragment().applyViewMode()
+		invalidateOptionsMenu()
+		return true
 	}
 
 	override fun addOrUpdateCloudNode(node: CloudNodeModel<*>) {

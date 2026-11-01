@@ -8,6 +8,7 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import org.cryptomator.domain.CloudNode
@@ -38,6 +39,9 @@ class BrowseFilesFragment : BaseFragment<FragmentBrowseFilesBinding>(FragmentBro
 
 	@Inject
 	lateinit var browseFilesPresenter: BrowseFilesPresenter
+
+	@Inject
+	lateinit var sharedPreferencesHandler: org.cryptomator.util.SharedPreferencesHandler
 
 	private var navigationMode: ChooseCloudNodeSettings.NavigationMode? = null
 
@@ -98,7 +102,7 @@ class BrowseFilesFragment : BaseFragment<FragmentBrowseFilesBinding>(FragmentBro
 		cloudNodesAdapter.setChooseCloudNodeSettings(chooseCloudNodeSettings)
 		navigationMode?.let { cloudNodesAdapter.updateNavigationMode(it) }
 
-		binding.recyclerViewLayout.recyclerView.layoutManager = LinearLayoutManager(context())
+		applyViewMode()
 		binding.recyclerViewLayout.recyclerView.adapter = cloudNodesAdapter
 		binding.recyclerViewLayout.recyclerView.setHasFixedSize(true)
 		binding.recyclerViewLayout.recyclerView.setPadding(0, 0, 0, TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 88f, resources.displayMetrics).toInt())
@@ -289,6 +293,33 @@ class BrowseFilesFragment : BaseFragment<FragmentBrowseFilesBinding>(FragmentBro
 
 	fun setFilterText(query: String) {
 		filterText = query
+	}
+
+	/**
+	 * List or grid, as chosen in the menu (kept in the preferences). The grid's tiles are square; their number per row
+	 * follows from the screen width and the chosen size.
+	 */
+	fun applyViewMode() {
+		val recyclerView = binding.recyclerViewLayout.recyclerView
+		val mode = BrowseFilesAdapter.ViewMode.of(sharedPreferencesHandler.browseViewMode())
+		if (!mode.isGrid) {
+			recyclerView.layoutManager = LinearLayoutManager(context())
+			cloudNodesAdapter.setViewMode(mode, 0)
+			return
+		}
+		val metrics = resources.displayMetrics
+		val widthPx = metrics.widthPixels
+		val spans = maxOf(2, (widthPx / metrics.density / mode.tileDp).toInt())
+		val manager = GridLayoutManager(context(), spans)
+		manager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+			override fun getSpanSize(position: Int): Int = if (cloudNodesAdapter.isGridTile(position)) 1 else spans
+		}
+		recyclerView.layoutManager = manager
+		cloudNodesAdapter.setViewMode(mode, widthPx / spans)
+	}
+
+	fun refreshOfflineBadges() {
+		cloudNodesAdapter.refreshOfflineBadges()
 	}
 
 	fun setSort(comparator: Comparator<CloudNodeModel<*>>) {

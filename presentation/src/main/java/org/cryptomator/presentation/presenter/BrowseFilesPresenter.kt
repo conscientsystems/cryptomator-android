@@ -89,7 +89,9 @@ import java.io.FileNotFoundException
 import java.io.Serializable
 import java.util.function.Supplier
 import org.cryptomator.domain.repository.OfflineFilesRepository
-import org.cryptomator.domain.repository.OfflineSyncResult
+import org.cryptomator.domain.repository.OfflineSyncListener
+import org.cryptomator.domain.repository.OfflineSyncState
+import org.cryptomator.presentation.service.OfflineSyncManager
 import org.cryptomator.domain.usecases.cloud.MakeAvailableOfflineUseCase
 import org.cryptomator.domain.usecases.cloud.RemoveFromOfflineUseCase
 import org.cryptomator.domain.usecases.cloud.SyncOfflineFilesUseCase
@@ -147,8 +149,6 @@ class BrowseFilesPresenter @Inject constructor( //
 	private lateinit var downloadFiles: MutableList<DownloadFile>
 
 	private var resumedAfterAuthentication = false
-	private var offlineSyncRunning = false
-	private var pendingOfflineSync: Cloud? = null
 
 	@InjectIntent
 	lateinit var intent: BrowseFilesIntent
@@ -545,52 +545,36 @@ class BrowseFilesPresenter @Inject constructor( //
 	 */
 	private fun syncOfflineFilesOnce(cloud: Cloud?) {
 		val vaultId = view?.folder?.vault()?.vaultId ?: return
-		if (cloud != null && vaultId !in offlineSyncedVaults && !offlineSyncRunning) {
-			syncOfflineFiles(cloud, false) { offlineSyncedVaults.add(vaultId) }
+		if (cloud != null && vaultId > 0) {
+			OfflineSyncManager.syncOnce(cloud) // repeated until one sync got through (e.g. after being offline)
 		}
 	}
 
 	/**
-	 * Runs one sync at a time; a sync asked for while one runs follows it, so that a file or folder just made available
-	 * offline isn't missed by a sync that started before.
+	 * Hands the vault to [OfflineSyncManager], which syncs on its own thread (and goes on when the browser is left) and
+	 * shows the progress in a notification. A vault that is syncing already is synced once more afterwards.
 	 */
-	private fun syncOfflineFiles(cloud: Cloud?, report: Boolean, onSynced: () -> Unit = {}) {
+	private fun syncOfflineFiles(cloud: Cloud?, @Suppress("UNUSED_PARAMETER") report: Boolean, onSynced: () -> Unit = {}) {
 		if (cloud == null) {
 			return
 		}
-		if (offlineSyncRunning) {
-			pendingOfflineSync = cloud
-			return
+		OfflineSyncManager.enqueue(cloud)
+		onSynced()
+	}
+
+	/**
+	 * While the browser is open, the offline badges follow the sync (pending -> on the device).
+	 */
+	private val offlineSyncListener = OfflineSyncListener { state ->
+		if (state.phase == OfflineSyncState.Phase.DOWNLOADING || state.phase == OfflineSyncState.Phase.DONE) {
+			mainHandler.post { view?.refreshOfflineBadges() }
 		}
-		offlineSyncRunning = true
-		syncOfflineFilesUseCase //
-			.withCloud(cloud) //
-			.run(object : DefaultResultHandler<OfflineSyncResult>() {
-				override fun onSuccess(result: OfflineSyncResult) {
-					onSynced()
-					if (report || result.downloaded > 0) {
-						view?.showMessage(context().getString(R.string.screen_file_browser_offline_sync_finished, result.files, result.downloaded))
-					}
-					if (result.failed > 0) {
-						view?.showMessage(context().getString(R.string.screen_file_browser_offline_sync_failed, result.failed))
-					}
-				}
+	}
+	private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
-				override fun onError(e: Throwable) {
-					Timber.tag("BrowseFilesPresenter").w(e, "Failed to update the offline files")
-					if (report) {
-						super.onError(e)
-					}
-				}
-
-				override fun onFinished() {
-					offlineSyncRunning = false
-					pendingOfflineSync?.let {
-						pendingOfflineSync = null
-						syncOfflineFiles(it, true)
-					}
-				}
-			})
+	override fun destroyed() {
+		offlineFilesRepository.removeSyncListener(offlineSyncListener)
+		super.destroyed()
 	}
 
 	private fun deleteCloudNode(nodes: List<CloudNodeModel<*>>) {
@@ -1379,7 +1363,6 @@ class BrowseFilesPresenter @Inject constructor( //
 		/**
 		 * The vaults whose offline files were brought up to date since the app started.
 		 */
-		private val offlineSyncedVaults: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 
 		val EXPORT_TRIGGERED_BY_USER: ExportOperation = object : ExportOperation {
 			override fun export(presenter: BrowseFilesPresenter, downloadFiles: List<DownloadFile>) {
@@ -1408,5 +1391,6 @@ class BrowseFilesPresenter @Inject constructor( //
 			syncOfflineFilesUseCase
 		)
 		this.authenticationExceptionHandler = authenticationExceptionHandler
+		offlineFilesRepository.addSyncListener(offlineSyncListener)
 	}
 }

@@ -122,6 +122,17 @@ constructor(context: Context) : SharedPreferences.OnSharedPreferenceChangeListen
 		return defaultSharedPreferences.getValue(LIVE_SEARCH, false)
 	}
 
+	/**
+	 * How the file browser shows its content: "list", "grid_small", "grid_medium" or "grid_large".
+	 */
+	fun browseViewMode(): String {
+		return defaultSharedPreferences.getString(BROWSE_VIEW_MODE, "list") ?: "list"
+	}
+
+	fun setBrowseViewMode(mode: String) {
+		defaultSharedPreferences.edit { editor -> editor.putString(BROWSE_VIEW_MODE, mode) }
+	}
+
 	fun useGlobSearch(): Boolean {
 		return defaultSharedPreferences.getValue(GLOB_SEARCH, false)
 	}
@@ -400,6 +411,7 @@ constructor(context: Context) : SharedPreferences.OnSharedPreferenceChangeListen
 		private const val LOCK_ON_SCREEN_OFF = "lockOnScreenOff"
 		private const val LIVE_SEARCH = "liveSearch"
 		private const val GLOB_SEARCH = "globSearch"
+		private const val BROWSE_VIEW_MODE = "browseViewMode"
 		private const val KEEP_UNLOCKED_WHILE_EDITING = "keepUnlockedWhileEditing"
 		private const val BACKGROUND_UNLOCK_PREPARATION = "backgroundUnlockPreparation"
 		private const val VAULTS_REMOVED_DURING_MIGRATION = "vaultsRemovedDuringMigration"
