@@ -1,5 +1,6 @@
 package org.cryptomator.presentation.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -39,6 +40,19 @@ class OfflineSyncNotification(private val context: Context) {
 	}
 
 	private fun show(state: OfflineSyncState) {
+		val notification = build(state)
+		if (notification == null) {
+			manager.cancel(NOTIFICATION_ID)
+		} else {
+			manager.notify(NOTIFICATION_ID, notification)
+		}
+	}
+
+	/**
+	 * The notification for [state]; null when there is nothing worth showing (idle, or a sync that found everything up
+	 * to date). Also used by [OfflineSyncService] as its foreground notification.
+	 */
+	fun build(state: OfflineSyncState): Notification? {
 		val title = context.getString(R.string.offline_sync_title, state.vaultName ?: "")
 		val builder = NotificationCompat.Builder(context, CHANNEL_ID) //
 			.setSmallIcon(R.drawable.ic_notification) //
@@ -48,25 +62,21 @@ class OfflineSyncNotification(private val context: Context) {
 			.setVisibility(NotificationCompat.VISIBILITY_PRIVATE) //
 			.setOnlyAlertOnce(true)
 		when (state.phase) {
-			Phase.IDLE -> {
-				manager.cancel(NOTIFICATION_ID)
-				return
-			}
+			Phase.IDLE -> return null
 			Phase.SCANNING -> builder.setOngoing(true).setProgress(0, 0, true).addAction(cancelAction())
 			Phase.DOWNLOADING -> {
 				val max = 1000
-				val value = if (state.bytesToDownload > 0) (state.bytesDownloaded * max / state.bytesToDownload).toInt() else max
+				val value = if (state.bytesFound > 0) (state.bytesOnDevice * max / state.bytesFound).toInt() else max
 				builder.setOngoing(true).setProgress(max, value, false).addAction(cancelAction())
 			}
 			Phase.DONE -> {
 				if (state.filesToDownload == 0 && state.failed == 0 && !state.interrupted) {
-					manager.cancel(NOTIFICATION_ID) // nothing new: no need to bother
-					return
+					return null // nothing new: no need to bother
 				}
 				builder.setOngoing(false).setAutoCancel(true).setTimeoutAfter(TIMEOUT_DONE_MS)
 			}
 		}
-		manager.notify(NOTIFICATION_ID, builder.build())
+		return builder.build()
 	}
 
 	private fun cancelAction(): NotificationCompat.Action {
@@ -85,7 +95,7 @@ class OfflineSyncNotification(private val context: Context) {
 	companion object {
 
 		private const val CHANNEL_ID = "offline_sync"
-		private const val NOTIFICATION_ID = 0x0ff1
+		const val NOTIFICATION_ID = 0x0ff1
 		private const val TIMEOUT_DONE_MS = 60_000L
 	}
 }

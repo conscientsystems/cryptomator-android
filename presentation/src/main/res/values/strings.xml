@@ -802,7 +802,7 @@
 	<string name="offline_sync_idle">Not updated since the app started</string>
 	<string name="offline_sync_scanning">Looking for files… %1$d folders, %2$d files</string>
 	<string name="offline_sync_all_current">All %1$d files are on this device</string>
-	<string name="offline_sync_downloading">Downloading %1$d of %2$d files · %3$s of %4$s</string>
+	<string name="offline_sync_downloading">%1$s of %2$s on this device · %3$d files to go</string>
 	<string name="offline_sync_interrupted">Interrupted: %1$d of %2$d files on this device</string>
 	<string name="offline_sync_done_failed">%1$d of %2$d files on this device, %3$d failed</string>
 	<string name="offline_sync_done">Done: all %1$d files are on this device</string>

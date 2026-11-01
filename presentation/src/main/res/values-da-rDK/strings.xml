@@ -517,7 +517,7 @@
 	<string name="offline_sync_idle">Ikke opdateret siden appen startede</string>
 	<string name="offline_sync_scanning">Finder filer… %1$d mapper, %2$d filer</string>
 	<string name="offline_sync_all_current">Alle %1$d filer er på telefonen</string>
-	<string name="offline_sync_downloading">Henter %1$d af %2$d filer · %3$s af %4$s</string>
+	<string name="offline_sync_downloading">%1$s af %2$s er på telefonen · %3$d filer tilbage</string>
 	<string name="offline_sync_interrupted">Afbrudt: %1$d af %2$d filer er på telefonen</string>
 	<string name="offline_sync_done_failed">%1$d af %2$d filer er på telefonen, %3$d fejlede</string>
 	<string name="offline_sync_done">Færdig: alle %1$d filer er på telefonen</string>

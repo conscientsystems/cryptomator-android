@@ -85,6 +85,9 @@ data class OfflineSyncState(
 	val filesDownloaded: Int = 0,
 	val bytesToDownload: Long = 0,
 	val bytesDownloaded: Long = 0,
+	/** All files below the pins, and the part of that which was on the device already when this sync started. */
+	val bytesFound: Long = 0,
+	val bytesStoredBefore: Long = 0,
 	val failed: Int = 0,
 	val currentFile: String? = null,
 	val finishedAt: Long? = null,
@@ -104,4 +107,8 @@ data class OfflineSyncState(
 
 	val filesAvailable: Int
 		get() = filesFound - filesToDownload + filesDownloaded
+
+	/** What is on the device now, of [bytesFound] - so a sync that starts over doesn't look like it went back. */
+	val bytesOnDevice: Long
+		get() = bytesStoredBefore + bytesDownloaded
 }

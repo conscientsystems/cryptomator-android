@@ -1,6 +1,8 @@
 package org.cryptomator.presentation.service
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import android.text.format.Formatter
 import org.cryptomator.data.cloud.crypto.CryptoCloud
 import org.cryptomator.domain.Cloud
@@ -43,6 +45,11 @@ object OfflineSyncManager {
 	@Volatile
 	private var cancelled = false
 
+	fun notification(): OfflineSyncNotification? = notification
+
+	/** A sync runs or waits. */
+	fun isBusy(): Boolean = queued.isNotEmpty()
+
 	@JvmStatic
 	fun init(context: Context, repository: OfflineFilesRepository) {
 		this.appContext = context.applicationContext
@@ -62,6 +69,7 @@ object OfflineSyncManager {
 			again[vaultId] = cloud
 			return
 		}
+		startForegroundService()
 		executor.execute {
 			cancelled = false
 			try {
@@ -74,7 +82,20 @@ object OfflineSyncManager {
 			} finally {
 				queued.remove(vaultId)
 				again.remove(vaultId)?.let { if (!cancelled) enqueue(it) }
+				if (queued.isEmpty()) {
+					OfflineSyncService.stop()
+					notification?.update(repository.syncState()) // the summary replaces the progress
+				}
 			}
+		}
+	}
+
+	private fun startForegroundService() {
+		try {
+			ContextCompat.startForegroundService(appContext, Intent(appContext, OfflineSyncService::class.java))
+		} catch (e: Exception) {
+			// e.g. not allowed from the background; the sync still runs as long as the app does
+			Timber.tag("OfflineSync").w(e, "Could not start the foreground service")
 		}
 	}
 
@@ -98,7 +119,7 @@ object OfflineSyncManager {
 			} else {
 				context.getString(
 					R.string.offline_sync_downloading, //
-					state.filesDownloaded, state.filesToDownload, size(state.bytesDownloaded), size(state.bytesToDownload)
+					size(state.bytesOnDevice), size(state.bytesFound), state.filesToDownload - state.filesDownloaded
 				)
 			}
 			Phase.DONE -> when {

@@ -143,6 +143,9 @@ class OfflineFilesSyncTest {
 		assertThat(done.bytesToDownload, `is`(10L))
 		assertThat(done.bytesDownloaded, `is`(10L))
 		assertThat(done.filesAvailable, `is`(2))
+		assertThat(done.bytesFound, `is`(20L)) // a was on the device before: counted, not downloaded
+		assertThat(done.bytesStoredBefore, `is`(10L))
+		assertThat(done.bytesOnDevice, `is`(20L))
 		assertThat(done.interrupted, `is`(false))
 		verify(offlineRepository, never()).prefetch(eq(a.cloudFile), any())
 	}

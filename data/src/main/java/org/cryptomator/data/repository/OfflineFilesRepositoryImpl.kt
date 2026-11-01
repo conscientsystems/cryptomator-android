@@ -138,12 +138,17 @@ class OfflineFilesRepositoryImpl @Inject constructor(
 				progress = progress.copy(filesFound = all.size)
 				publish(progress)
 			}
-			val missing = all.distinctBy { it.cloudFile.path }.filterNot { offlineRepository.isCurrent(it.cloudFile) }
+			val distinct = all.distinctBy { it.cloudFile.path }
+			val missing = distinct.filterNot { offlineRepository.isCurrent(it.cloudFile) }
+			val bytesFound = distinct.sumOf { it.cloudFile.size ?: it.size ?: 0L }
+			val bytesToDownload = missing.sumOf { it.cloudFile.size ?: it.size ?: 0L }
 			progress = progress.copy(
 				phase = Phase.DOWNLOADING,
 				filesFound = all.size,
 				filesToDownload = missing.size,
-				bytesToDownload = missing.sumOf { it.cloudFile.size ?: it.size ?: 0L }
+				bytesToDownload = bytesToDownload,
+				bytesFound = bytesFound,
+				bytesStoredBefore = bytesFound - bytesToDownload
 			)
 			publish(progress, force = true)
 			var downloaded = 0
